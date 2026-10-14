@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Atlas Bíblico & Histórico Interativo</title>
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  
+  <!-- Google Fonts: Cinzel & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --primary: #92400e;
+      --primary-dark: #78350f;
+      --primary-light: #fef3c7;
+      --accent: #b45309;
+      --bg-dark: #090d16;
+      --bg-surface: #0f172a;
+      --bg-card: rgba(15, 23, 42, 0.96);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border-color: #334155;
+      --gold: #d97706;
+      --gold-light: #fbbf24;
+      --parchment: #fef9c3;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* TOP BAR */
+    header {
+      height: 64px;
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1.25rem;
+      z-index: 1000;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--gold) 0%, #b45309 100%);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-family: 'Cinzel', serif;
+      font-weight: 700;
+      font-size: 1.2rem;
+      box-shadow: 0 2px 8px rgba(217, 119, 6, 0.4);
+    }
+
+    .brand-title {
+      font-family: 'Cinzel', serif;
+      font-weight: 700;
+      font-size: 1.1rem;
+      letter-spacing: 0.5px;
+      color: #f1f5f9;
+    }
+
+    .brand-subtitle {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      letter-spacing: 0.3px;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .current-era-pill {
+      background: rgba(217, 119, 6, 0.15);
+      border: 1px solid rgba(217, 119, 6, 0.4);
+      color: var(--gold-light);
+      padding: 0.35rem 0.85rem;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .map-style-selector {
+      background: #1e293b;
+      border: 1px solid var(--border-color);
+      color: #cbd5e1;
+      padding: 0.38rem 0.65rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      outline: none;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .map-style-selector:focus {
+      border-color: var(--gold);
+    }
+
+    .search-box {
+      position: relative;
+    }
+
+    .search-input {
+      background: #1e293b;
+      border: 1px solid var(--border-color);
+      color: #fff;
+      padding: 0.4rem 0.8rem 0.4rem 2rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      outline: none;
+      width: 170px;
+      transition: all 0.2s;
+    }
+    .search-input:focus {
+      border-color: var(--gold);
+      width: 220px;
+      box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.2);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 0.6rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      pointer-events: none;
+    }
+
+    .btn-header {
+      background: #334155;
+      color: #f8fafc;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 0.4rem 0.75rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: all 0.2s;
+    }
+    .btn-header:hover {
+      background: #475569;
+      border-color: #64748b;
+    }
+
+    /* MAIN CONTAINER */
+    .app-main {
+      flex: 1;
+      display: flex;
+      position: relative;
+      overflow: hidden;
+      background: #090e17;
+    }
+
+    #map {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      background: #0f172a;
+      z-index: 10;
+    }
+
+    /* SIDE DRAWER (DETAIL PANEL) */
+    .drawer {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      width: 410px;
+      max-height: calc(100% - 2rem);
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.65);
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transform: translateX(0);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+    }
+
+    .drawer.closed {
+      transform: translateX(440px);
+      pointer-events: none;
+      opacity: 0;
+    }
+
+    .drawer-header {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
+      background: rgba(30, 41, 59, 0.85);
+    }
+
+    .drawer-title-area h2 {
+      font-family: 'Cinzel', serif;
+      font-size: 1.2rem;
+      color: #fff;
+      margin-bottom: 0.25rem;
+    }
+
+    .drawer-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.18rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+    .badge-step {
+      background: var(--gold);
+      color: #fff;
+      font-weight: 700;
+    }
+    .badge-era {
+      background: rgba(217, 119, 6, 0.2);
+      color: var(--gold-light);
+      border: 1px solid rgba(217, 119, 6, 0.4);
+    }
+    .badge-ref {
+      background: rgba(56, 189, 248, 0.15);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+
+    .drawer-close {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 1.2rem;
+      line-height: 1;
+      padding: 0.2rem;
+      border-radius: 4px;
+      transition: color 0.2s;
+    }
+    .drawer-close:hover {
+      color: #fff;
+    }
+
+    .drawer-body {
+      padding: 1.2rem;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    /* CARD VISUAL HISTÓRICO */
+    .drawer-visual-card {
+      width: 100%;
+      height: 150px;
+      border-radius: 10px;
+      margin-bottom: 1.1rem;
+      background: radial-gradient(circle at 50% 30%, #1e293b 0%, #0f172a 100%);
+      border: 1px solid rgba(217, 119, 6, 0.3);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 0.8rem;
+    }
+
+    .drawer-visual-card::before {
+      content: '';
+      position: absolute;
+      inset: 5px;
+      border: 1px dashed rgba(217, 119, 6, 0.2);
+      border-radius: 6px;
+      pointer-events: none;
+    }
+
+    .visual-icon-circle {
+      width: 52px;
+      height: 52px;
+      background: linear-gradient(135deg, rgba(217, 119, 6, 0.25) 0%, rgba(180, 83, 9, 0.45) 100%);
+      border: 1.5px solid var(--gold);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      margin-bottom: 0.4rem;
+    }
+
+    .visual-place-title {
+      font-family: 'Cinzel', serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--gold-light);
+    }
+
+    .visual-place-sub {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      margin-top: 0.15rem;
+    }
+
+    /* SEÇÃO DO AUTOR BÍBLICO (DESTAQUE PEDAGÓGICO) */
+    .author-box {
+      background: rgba(30, 41, 59, 0.85);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: 8px;
+      padding: 0.75rem 0.9rem;
+      margin-bottom: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .author-header {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: #38bdf8;
+      font-weight: 700;
+    }
+
+    .author-name {
+      font-weight: 700;
+      color: #f1f5f9;
+      font-size: 0.88rem;
+    }
+
+    .author-location {
+      font-size: 0.8rem;
+      color: #cbd5e1;
+      line-height: 1.4;
+    }
+
+    /* BLOCOS DE FICHA DIDÁTICA */
+    .study-field {
+      margin-bottom: 0.9rem;
+    }
+
+    .field-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--gold-light);
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .field-content {
+      font-size: 0.88rem;
+      line-height: 1.5;
+      color: #cbd5e1;
+    }
+
+    .theology-box {
+      background: rgba(217, 119, 6, 0.1);
+      border-left: 3px solid var(--gold);
+      padding: 0.65rem 0.8rem;
+      border-radius: 0 6px 6px 0;
+      font-size: 0.85rem;
+      line-height: 1.45;
+      color: #fde68a;
+    }
+
+    .archaeology-box {
+      background: rgba(30, 41, 59, 0.7);
+      border-left: 3px solid #64748b;
+      padding: 0.65rem 0.8rem;
+      border-radius: 0 6px 6px 0;
+      font-size: 0.83rem;
+      line-height: 1.45;
+      color: #94a3b8;
+    }
+
+    /* CONTROLES GUIADOS PASSO A PASSO */
+    .step-navigator {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 1.1rem;
+      padding-top: 0.85rem;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .btn-step-nav {
+      flex: 1;
+      background: #1e293b;
+      border: 1px solid var(--border-color);
+      color: #f1f5f9;
+      padding: 0.55rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.3rem;
+      transition: all 0.2s;
+    }
+    .btn-step-nav:hover {
+      background: #334155;
+      border-color: #64748b;
+    }
+
+    .btn-focus {
+      background: var(--gold);
+      color: #fff;
+      border: none;
+      padding: 0.55rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.3rem;
+      transition: background 0.2s;
+    }
+    .btn-focus:hover {
+      background: #b45309;
+    }
+
+    /* TIMELINE BAR (BOTTOM) */
+    .timeline-container {
+      background: #0f172a;
+      border-top: 1px solid var(--border-color);
+      z-index: 1000;
+      padding: 0.65rem 1.25rem 0.85rem;
+      box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.5);
+    }
+
+    .timeline-nav-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+    }
+
+    .era-info-meta {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .era-title {
+      font-family: 'Cinzel', serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #f1f5f9;
+    }
+
+    .era-years {
+      font-size: 0.75rem;
+      color: var(--gold-light);
+      font-weight: 600;
+      background: rgba(217, 119, 6, 0.15);
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+    }
+
+    .timeline-buttons {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .btn-timeline-ctrl {
+      background: #1e293b;
+      border: 1px solid var(--border-color);
+      color: #cbd5e1;
+      padding: 0.32rem 0.65rem;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    .btn-timeline-ctrl:hover {
+      background: #334155;
+      color: #fff;
+    }
+    .btn-timeline-ctrl.active-play {
+      background: #b45309;
+      border-color: var(--gold);
+      color: #fff;
+    }
+
+    /* ERA CHIPS SLIDER */
+    .era-chips-track {
+      display: flex;
+      gap: 0.5rem;
+      overflow-x: auto;
+      padding-bottom: 0.35rem;
+      scrollbar-width: thin;
+      scrollbar-color: #334155 transparent;
+    }
+    .era-chips-track::-webkit-scrollbar {
+      height: 4px;
+    }
+    .era-chips-track::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 2px;
+    }
+
+    .era-chip {
+      flex: 0 0 auto;
+      background: #1e293b;
+      border: 1px solid var(--border-color);
+      padding: 0.4rem 0.7rem;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 0.12rem;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      min-width: 140px;
+    }
+    .era-chip:hover {
+      border-color: #475569;
+      background: #273549;
+    }
+    .era-chip.active {
+      background: linear-gradient(135deg, rgba(217, 119, 6, 0.25) 0%, rgba(180, 83, 9, 0.35) 100%);
+      border-color: var(--gold);
+      box-shadow: 0 0 12px rgba(217, 119, 6, 0.25);
+    }
+
+    .chip-name {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #e2e8f0;
+      white-space: nowrap;
+    }
+    .era-chip.active .chip-name {
+      color: #fff;
+    }
+    .chip-period {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+    .era-chip.active .chip-period {
+      color: var(--gold-light);
+    }
+
+    /* PINOS NUMERADOS VISUAIS DO MAPA */
+    .numbered-step-pin {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--gold);
+      color: white;
+      font-weight: 700;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2.5px solid #ffffff;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.65);
+      cursor: pointer;
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s;
+    }
+    .numbered-step-pin:hover {
+      transform: scale(1.22);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.85);
+      z-index: 9999;
+    }
+
+    .leaflet-popup-content-wrapper {
+      background: #1e293b !important;
+      color: #f8fafc !important;
+      border-radius: 8px !important;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.6) !important;
+    }
+    .leaflet-popup-tip {
+      background: #1e293b !important;
+    }
+    .popup-inner h3 {
+      font-family: 'Cinzel', serif;
+      font-size: 0.95rem;
+      color: var(--gold-light);
+      margin-bottom: 0.2rem;
+    }
+    .popup-inner p {
+      font-size: 0.78rem;
+      color: #cbd5e1;
+      margin-bottom: 0.45rem;
+      line-height: 1.35;
+    }
+    .popup-inner .btn-more {
+      background: var(--gold);
+      color: white;
+      border: none;
+      padding: 0.25rem 0.6rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* MODAL DE AJUDA / SOBRE */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(4px);
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .modal-card {
+      background: #1e293b;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      width: 90%;
+      max-width: 540px;
+      max-height: 85vh;
+      overflow-y: auto;
+      padding: 1.5rem;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+    }
+    .modal-card h2 {
+      font-family: 'Cinzel', serif;
+      color: var(--gold-light);
+      margin-bottom: 0.75rem;
+      font-size: 1.3rem;
+    }
+    .modal-card p {
+      font-size: 0.9rem;
+      line-height: 1.55;
+      color: #cbd5e1;
+      margin-bottom: 0.75rem;
+    }
+    .modal-card ul {
+      margin-left: 1.25rem;
+      margin-bottom: 1rem;
+      font-size: 0.88rem;
+      color: #94a3b8;
+      line-height: 1.6;
+    }
+    .modal-close-btn {
+      background: var(--gold);
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 0.5rem;
+    }
+
+    /* RESPONSIVIDADE MOBILE */
+    @media (max-width: 768px) {
+      header {
+        height: 56px;
+        padding: 0 0.75rem;
+      }
+      .brand-title {
+        font-size: 0.95rem;
+      }
+      .current-era-pill {
+        display: none;
+      }
+      .search-input {
+        width: 100px;
+      }
+      .search-input:focus {
+        width: 140px;
+      }
+      .drawer {
+        top: auto;
+        bottom: 0;
+        right: 0;
+        left: 0;
+        width: 100%;
+        max-height: 65vh;
+        border-radius: 16px 16px 0 0;
+        transform: translateY(0);
+      }
+      .drawer.closed {
+        transform: translateY(105%);
+      }
+      .timeline-container {
+        padding: 0.5rem 0.75rem 0.6rem;
+      }
+      .era-title {
+        font-size: 0.85rem;
+      }
+      .era-chip {
+        min-width: 120px;
+        padding: 0.35rem 0.55rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- CABEÇALHO -->
+  <header>
+    <div class="brand">
+      <div class="brand-icon">†</div>
+      <div>
+        <div class="brand-title">Atlas Bíblico & Histórico</div>
+        <div class="brand-subtitle">Do Éden às Duas Igrejas (13 Fases Cronológicas)</div>
+      </div>
+    </div>
+
+    <div class="header-controls">
+      <div class="current-era-pill" id="currentEraPill">
+        <span>●</span>
+        <span id="pillEraName">Criação & Éden</span>
+      </div>
+
+      <!-- SELETOR DE ESTILO DO MAPA (ESRI PÚBLICO LIVRE DE BLOQUEIOS) -->
+      <select id="mapStyleSelect" class="map-style-selector" title="Estilo Cartográfico">
+        <option value="satellite" selected>🛰️ Satélite Real (Esri)</option>
+        <option value="topo">⛰️ Relevo Topográfico</option>
+        <option value="street">🗺️ Mapa de Ruas / Estradas</option>
+      </select>
+
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" class="search-input" placeholder="Buscar local...">
+      </div>
+
+      <button class="btn-header" id="btnHelp" title="Sobre este Atlas">
+        <span>ℹ️</span> <span>Sobre</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ÁREA PRINCIPAL COM MAPA E PAINEL LATERAL -->
+  <div class="app-main">
+    <div id="map"></div>
+
+    <!-- PAINEL LATERAL DE ESTUDO GUIADO -->
+    <aside class="drawer closed" id="detailDrawer">
+      <div class="drawer-header">
+        <div class="drawer-title-area">
+          <h2 id="drawerTitle">Nome do Local</h2>
+          <div class="drawer-tags">
+            <span class="badge badge-step" id="drawerStep">Passo 1</span>
+            <span class="badge badge-era" id="drawerEra">Era Bíblica</span>
+            <span class="badge badge-ref" id="drawerBiblia">Gênesis 12:1</span>
+          </div>
+        </div>
+        <button class="drawer-close" id="btnCloseDrawer" title="Fechar painel">✕</button>
+      </div>
+
+      <div class="drawer-body">
+        <!-- CARD HISTÓRICO VISUAL -->
+        <div class="drawer-visual-card">
+          <div class="visual-icon-circle" id="visualIcon">🏛️</div>
+          <div class="visual-place-title" id="visualTitle">Título do Local</div>
+          <div class="visual-place-sub" id="visualSub">Subtítulo Histórico</div>
+        </div>
+
+        <!-- DESTAQUE DO AUTOR BÍBLICO E LOCAL DE REDAÇÃO -->
+        <div class="author-box">
+          <div class="author-header">
+            <span>✍️</span> <span>Autor & Local de Redação</span>
+          </div>
+          <div class="author-name" id="drawerAutor">Nome do Autor</div>
+          <div class="author-location" id="drawerOndeAutor">Onde o autor estava ao registrar este texto...</div>
+        </div>
+
+        <!-- RELATO E CONTEXTO -->
+        <div class="study-field">
+          <div class="field-label"><span>📖</span> Relato Bíblico & Histórico</div>
+          <div class="field-content" id="drawerDescricao">Descrição objetiva...</div>
+        </div>
+
+        <!-- SIGNIFICADO TEOLÓGICO -->
+        <div class="study-field">
+          <div class="field-label"><span>💡</span> Relevância Espiritual & Teológica</div>
+          <div class="theology-box" id="drawerTeologia">Significado para a história da salvação...</div>
+        </div>
+
+        <!-- ARQUEOLOGIA -->
+        <div class="study-field">
+          <div class="field-label"><span>🏛️</span> Arqueologia & Geografia Moderna</div>
+          <div class="archaeology-box" id="drawerArqueologia">Descobertas arqueológicas e sítio atual...</div>
+        </div>
+
+        <!-- NAVEGADOR DE PASSOS GUIADOS -->
+        <div class="step-navigator">
+          <button class="btn-step-nav" id="btnPrevStep" title="Passo anterior da época">
+            ◀ Anterior
+          </button>
+          <button class="btn-focus" id="btnFocusMap" title="Centralizar câmera">
+            🎯 Focar
+          </button>
+          <button class="btn-step-nav" id="btnNextStep" title="Próximo passo da época">
+            Próximo ▶
+          </button>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- BARRA DE LINHA DO TEMPO CRONOLÓGICA -->
+  <div class="timeline-container">
+    <div class="timeline-nav-row">
+      <div class="era-info-meta">
+        <div class="era-title" id="timelineEraTitle">1. Criação & Éden</div>
+        <div class="era-years" id="timelineEraYears">~Origens Primordiais</div>
+      </div>
+
+      <div class="timeline-buttons">
+        <button class="btn-timeline-ctrl" id="btnPrevEra" title="Época anterior">◀ Anterior</button>
+        <button class="btn-timeline-ctrl" id="btnPlayTimeline" title="Avanço automático">▶ Reproduzir</button>
+        <button class="btn-timeline-ctrl" id="btnNextEra" title="Próxima época">Próxima ▶</button>
+      </div>
+    </div>
+
+    <!-- CHIPS SELETORES DE CADA PERÍODO -->
+    <div class="era-chips-track" id="eraChipsTrack">
+      <!-- Gerado via JavaScript -->
+    </div>
+  </div>
+
+  <!-- MODAL INFORMATIVO -->
+  <div class="modal-overlay" id="helpModal">
+    <div class="modal-card">
+      <h2>Atlas Bíblico & Histórico (13 Fases)</h2>
+      <p>Este aplicativo interativo organiza o estudo da Bíblia de maneira intuitiva, cobrindo da Criação em Gênesis até as grandes ramificações eclesiais históricas.</p>
+      
+      <p><strong>Recursos Didáticos Exclusivos:</strong></p>
+      <ul>
+        <li><strong>Marcadores Numerados (1, 2, 3...):</strong> Cada local possui um número sequencial indicando o itinerário histórico exato.</li>
+        <li><strong>Onde os Autores Estavam:</strong> Cada ficha identifica quem escreveu o texto e em que localidade o autor se encontrava no momento do registro.</li>
+        <li><strong>Navegação Guiada:</strong> Utilize os botões <em>Anterior</em> e <em>Próximo</em> dentro da gaveta para fazer um tour passo a passo sem se perder.</li>
+        <li><strong>Camadas Esri Seguras:</strong> Funciona 100% livre de bloqueios ou necessidade de chave de API.</li>
+      </ul>
+
+      <button class="modal-close-btn" id="btnCloseHelp">Entendi e Começar a Explorar</button>
+    </div>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <script>
+    // Dados injetados com 13 fases
+    const atlasData = {"eras": [{"id": "eden_origens", "nome": "Criação & Bacia do Éden", "periodo": "~Origens Primordiais", "livros": "Gênesis 1–4", "descricao_era": "O berço da narrativa bíblica e os quatro rios primordiais na bacia mesopotâmica entre o Tigre e o Eufrates.", "centro": [31.0, 46.5], "zoom": 6, "cor": "#059669", "locais": [{"passo": 1, "id": "eden", "nome": "Bacia do Éden & Quatro Rios", "coords": [30.985, 47.05], "pais": "Iraque (Confluência Tigre/Eufrates)", "biblia": "Gênesis 2:10–14", "autor": "Moisés", "onde_autor": "Deserto do Sinai / Planícies de Moabe (tradição primordial compilada)", "resumo": "O jardim primordial e as fontes fluviais", "descricao": "O texto bíblico situa as origens da humanidade junto a quatro rios: Pisom, Giom, Hidequel (Tigre) e Eufrates. Historicamente, essa região corresponde ao Crescente Fértil mesopotâmico, onde surgiram a agricultura e as primeiras cidades.", "teologia": "A harmonia primordial entre Deus, o homem e a criação, rompida pela Queda mas prometida à redenção messiânica futura (Gênesis 3:15).", "arqueologia": "A bacia de Eridu e Uruk é reconhecida pela arqueologia como o berço urbano mais antigo da civilização humana (c. 4000 a.C.).", "icone": "🌳", "subtitulo": "Berço dos Rios Tigre e Eufrates"}], "rotas": []}, {"id": "ararate_diluvio", "nome": "A Arca & Montes de Ararate", "periodo": "~Época Pós-Diluviana", "livros": "Gênesis 6–9", "descricao_era": "O renascimento da criação e o repouso da Arca na região montanhosa de Urartu sob a aliança do arco-íris.", "centro": [39.7, 44.3], "zoom": 6, "cor": "#0284c7", "locais": [{"passo": 1, "id": "ararate", "nome": "Montes de Ararate (Urartu)", "coords": [39.702, 44.299], "pais": "Turquia Oriental (Planalto Armênio)", "biblia": "Gênesis 8:4; 9:12–17", "autor": "Moisés", "onde_autor": "Deserto do Sinai / Acampamento de Moabe", "resumo": "Repouso da Arca de Noé e Aliança", "descricao": "No décimo sétimo dia do sétimo mês, a Arca repousou sobre os 'montes de Ararate'. O texto hebraico refere-se à cordilheira de Urartu. Ali Noé edificou um altar e Deus estabeleceu a aliança do arco-íris.", "teologia": "O juízo sobre a corrupção e a graça salvadora que preserva um remanescente, prefigurando o batismo e a salvação em Cristo.", "arqueologia": "O maciço de Ağrı Dağı (5.137 m) domina a paisagem. Documentos assírios dos séculos IX-VII a.C. descrevem o poderoso reino montanhês de Urartu.", "icone": "🕊️", "subtitulo": "Cordilheira de Urartu (5.137 m)"}], "rotas": []}, {"id": "abraao_patriarcas", "nome": "A Jornada de Fé de Abraão", "periodo": "~2000 – 1850 a.C.", "livros": "Gênesis 11:27–25:11", "descricao_era": "O chamado monoteísta: a partida de Ur na Suméria até Harã e a peregrinação em Canaã.", "centro": [33.5, 40.0], "zoom": 6, "cor": "#d97706", "locais": [{"passo": 1, "id": "ur_abraao", "nome": "1. Ur dos Caldeus", "coords": [30.962, 46.103], "pais": "Iraque Meridional", "biblia": "Gênesis 11:31", "autor": "Moisés", "onde_autor": "Deserto do Sinai", "resumo": "Ponto de partida da família patriarcal", "descricao": "Próspera cidade-estado suméria dedicada ao deus-lua Nanna. Dali Terá e seu filho Abrão saíram para peregrinar.", "teologia": "O rompimento com o politeísmo mesopotâmico em resposta à voz soberana do Deus único.", "arqueologia": "Escavações de Sir Leonard Woolley revelaram o colossal Zigurate de Ur e tabuletas administrativas em escrita cuneiforme.", "icone": "🏛️", "subtitulo": "Metrópole Suméria de Terá e Abrão"}, {"passo": 2, "id": "hara_abraao", "nome": "2. Harã", "coords": [36.864, 39.025], "pais": "Turquia (Fronteira com Síria)", "biblia": "Gênesis 12:1–4", "autor": "Moisés", "onde_autor": "Planícies de Moabe", "resumo": "O grande chamado da fé", "descricao": "Abrão fixa-se temporariamente aqui até a morte de Terá. Aos 75 anos, recebe o mandato divino: 'Sai da tua terra... para a terra que eu te mostrarei'.", "teologia": "A fé ativa que renuncia à segurança familiar confiando na fidelidade da promessa divina.", "arqueologia": "Mencionada em cartas de Mari e Ebla como centro comercial e de culto lunar no curso do rio Balikh.", "icone": "🐪", "subtitulo": "Mandato Divino aos 75 Anos"}, {"passo": 3, "id": "siquem_abraao", "nome": "3. Siquém (Carvalho de Moré)", "coords": [32.213, 35.281], "pais": "Cisjordânia / Palestina (Nablus)", "biblia": "Gênesis 12:6–7", "autor": "Moisés", "onde_autor": "Deserto do Sinai", "resumo": "Primeiro altar erguido em Canaã", "descricao": "Ao chegar em Siquém, Deus aparece a Abrão e promete: 'À tua descendência darei esta terra'. Abrão edifica seu primeiro altar ao Senhor em Canaã.", "teologia": "A posse espiritual da Terra da Promessa selada pelo culto e adoração exclusiva ao Senhor.", "arqueologia": "Tell Balata revelou templos de fortaleza e portões ciclópios do Bronze Médio contemporâneos da era patriarcal.", "icone": "⛰️", "subtitulo": "Primeiro Altar em Canaã"}, {"passo": 4, "id": "hebrom_abraao", "nome": "4. Hebrom (Manre e Macpela)", "coords": [31.525, 35.099], "pais": "Cisjordânia (Al-Khalil)", "biblia": "Gênesis 13:18; 23:19", "autor": "Moisés", "onde_autor": "Planícies de Moabe", "resumo": "Túmulo perpétuo dos patriarcas", "descricao": "Abraão estabelece suas tendas junto aos carvalhais de Manre e compra dos heteus a caverna de Macpela para sepultura de Sara e dos patriarcas.", "teologia": "A compra legal da caverna foi o primeiro pedaço de terra fisicamente possuído por Israel em Canaã.", "arqueologia": "O colossal recinto de cantaria erguido por Herodes o Grande protege o local tradicional das sepulturas até hoje.", "icone": "🏺", "subtitulo": "Caverna de Macpela"}, {"passo": 5, "id": "berseba_abraao", "nome": "5. Berseba", "coords": [31.244, 34.841], "pais": "Israel (Deserto do Neguev)", "biblia": "Gênesis 21:31–33", "autor": "Moisés", "onde_autor": "Deserto do Sinai", "resumo": "Poço do Juramento e culto a El-Olam", "descricao": "Abraão celebra um pacto de paz com o rei filisteu Abimeleque, planta uma tamargueira e invoca o nome do 'Senhor, o Deus Eterno' (El-Olam).", "teologia": "Deus como garantidor da paz e protetor das fontes de vida no deserto.", "arqueologia": "Tel Sheva abriga poços bíblicos escavados na rocha com mais de 70 metros de profundidade da Idade do Ferro.", "icone": "💧", "subtitulo": "Poço do Juramento & Tamargueira"}], "rotas": [{"nome": "Trajeto Numerado da Fé de Abraão (1 ➔ 5)", "pontos": [[30.962, 46.103], [33.315, 44.366], [36.864, 39.025], [36.202, 36.16], [34.802, 35.886], [32.213, 35.281], [31.525, 35.099], [31.244, 34.841]], "cor": "#d97706"}]}, {"id": "nascimento_israel", "nome": "Nascimento do Nome Israel & 12 Filhos", "periodo": "~1750 – 1700 a.C.", "livros": "Gênesis 28; 32; 35; 46", "descricao_era": "De Jacó a Israel: a luta no Jaboque, a bênção das doze tribos e a descida de José e Jacó para o Egito.", "centro": [31.5, 34.5], "zoom": 7, "cor": "#0d9488", "locais": [{"passo": 1, "id": "peniel_jaboque", "nome": "1. Vau do Jaboque (Peniel)", "coords": [32.185, 35.75], "pais": "Jordânia (Vale do Zerqa)", "biblia": "Gênesis 32:24–30", "autor": "Moisés", "onde_autor": "Deserto de Moabe", "resumo": "Luta noturna e mudança de nome para Israel", "descricao": "Jacó fica só e luta com o Anjo do Senhor até o romper da alva. Tem a coxa deslocada, pede a bênção e recebe o novo nome: 'Não te chamarás mais Jacó, mas Israel, pois lutaste com Deus e prevaleceste'.", "teologia": "A conversão do 'suplantador' (Jacó) em 'guerreiro de Deus' (Israel), marcando o nascimento espiritual do povo da aliança.", "arqueologia": "A foz do rio Jaboque corta os planaltos de Gileade, passagem histórica tradicional entre o deserto e o vale do Jordão.", "icone": "⚔️", "subtitulo": "De Jacó a Israel (Luta Noturna)"}, {"passo": 2, "id": "betel_israel", "nome": "2. Betel (Luz)", "coords": [31.93, 35.22], "pais": "Cisjordânia (Beitin)", "biblia": "Gênesis 28:12–19; 35:9–15", "autor": "Moisés", "onde_autor": "Deserto do Sinai", "resumo": "A Escada para o Céu e a renovação", "descricao": "Lugar onde Jacó viu em sonho a escada tocando o céu com anjos descendo e subindo. Anos depois, Deus reafirma que reis procederiam de seus lombos.", "teologia": "A comunicação ininterrupta entre o céu e a terra, prefigurando Jesus como a ponte viva (João 1:51).", "arqueologia": "Local arqueológico nas colinas de Benjamim com vestígios contínuos de santuários da Idade do Bronze.", "icone": "🪜", "subtitulo": "A Casa de Deus (Bet-El)"}, {"passo": 3, "id": "avaris_egito", "nome": "3. Gósen / Avaris (Egito)", "coords": [30.787, 31.821], "pais": "Egito (Delta Oriental do Nilo)", "biblia": "Gênesis 46:1–7; 47:5–6", "autor": "Moisés", "onde_autor": "Deserto do Sinai", "resumo": "Assentamento das 12 Tribos no Egito", "descricao": "José acolhe seu pai Jacó e seus 11 irmãos com suas famílias (70 almas). O Faraó concede a rica terra de Gósen para apascentarem seus rebanhos.", "teologia": "A soberania divina que transforma o mal praticado pelos irmãos em preservação de muitas vidas (Gênesis 50:20).", "arqueologia": "Escavações em Tell el-Dab'a (Avaris) descobriram uma cidade com cultura material semítica e palácio atribuído a um alto oficial cananeu.", "icone": "🌾", "subtitulo": "Preservação da Família Patriarcal"}], "rotas": [{"nome": "Jornada de Israel ao Egito (1 ➔ 3)", "pontos": [[32.185, 35.75], [31.93, 35.22], [31.244, 34.841], [30.787, 31.821]], "cor": "#0d9488"}]}, {"id": "exodo_tribos", "nome": "Êxodo & As 12 Tribos em Siló", "periodo": "~1440 – 1200 a.C.", "livros": "Êxodo a Josué", "descricao_era": "A libertação do Egito, os Dez Mandamentos no Sinai e o assentamento da Arca da Aliança em Siló com a repartição da terra.", "centro": [29.8, 34.0], "zoom": 6, "cor": "#ea580c", "locais": [{"passo": 1, "id": "ramses_exodo", "nome": "1. Pi-Ramsés (Delta)", "coords": [30.801, 31.831], "pais": "Egito", "biblia": "Êxodo 12:37", "autor": "Moisés", "onde_autor": "Deserto do Sinai", "resumo": "Partida e a Primeira Páscoa", "descricao": "Cidade dos faraós onde Israel trabalhou na escravidão. A nação parte após a décima praga e o sangue do cordeiro nos umbrais das portas.", "teologia": "A redenção pela morte substitutiva do Cordeiro Pascal, libertando o povo do cativeiro do pecado.", "arqueologia": "Qantir, capital militar dos faraós raméssidas, com extensos estábulos e oficinas de carros de combate.", "icone": "🏛️", "subtitulo": "Partida após a Décima Praga"}, {"passo": 2, "id": "sinai_tabernaculo", "nome": "2. Monte Sinai (Horebe)", "coords": [28.539, 33.975], "pais": "Egito (Península do Sinai)", "biblia": "Êxodo 19–20; 25:8–9", "autor": "Moisés", "onde_autor": "Sopé do Monte Sinai", "resumo": "Os Dez Mandamentos e o Tabernáculo", "descricao": "Deus desce sobre a montanha em fogo e proclama os Dez Mandamentos. Moisés recebe a planta celeste para construir o Tabernáculo e a Arca da Aliança.", "teologia": "O nascimento constitucional de Israel como nação santa e reino sacerdotal mediante a Torá.", "arqueologia": "O Mosteiro de Santa Catarina preserva códices e ícones bíblicos mais antigos do mundo ao pé do monte.", "icone": "⚡", "subtitulo": "Entrega das Tábuas da Lei"}, {"passo": 3, "id": "nebo_morte", "nome": "3. Monte Nebo", "coords": [31.768, 35.725], "pais": "Jordânia (Planalto de Moabe)", "biblia": "Deuteronômio 34:1–5", "autor": "Josué / Escribas de Israel", "onde_autor": "Planícies de Moabe / Canaã", "resumo": "Visão da Terra e Morte de Moisés", "descricao": "Moisés sobe ao cume de Pisga, contempla toda a terra prometida até o Mar Mediterrâneo e morre em santidade nas mãos de Deus aos 120 anos.", "teologia": "A fidelidade de Deus que cumpre Suas promessas e a transição da liderança profética para Josué.", "arqueologia": "Santuário memorial com basílica bizantina e mosaicos de caçadores e pastores do século VI d.C.", "icone": "🌄", "subtitulo": "Despedida e Morte de Moisés"}, {"passo": 4, "id": "silo_12tribos", "nome": "4. Siló (Centro das 12 Tribos)", "coords": [32.055, 35.289], "pais": "Cisjordânia (Samaria)", "biblia": "Josué 18:1; 1 Samuel 1:3", "autor": "Josué / Samuel", "onde_autor": "Siló / Ramá", "resumo": "A Arca armada e a partilha da terra", "descricao": "Toda a congregação dos filhos de Israel reúne-se em Siló e arma ali a Tenda da Congregação. Josué lança sortes para repartir o território entre as tribos.", "teologia": "Siló como coração espiritual e centro de adoração indivisa de Israel por mais de três séculos.", "arqueologia": "Tel Shiloh apresenta platôs de pedra talhada correspondentes às dimensões bíblicas do Tabernáculo e cerâmicas cultuais.", "icone": "🕊️", "subtitulo": "Primeira Capital Religiosa de Israel"}], "rotas": [{"nome": "Do Egito ao Tabernáculo em Siló (1 ➔ 4)", "pontos": [[30.801, 31.831], [29.966, 32.549], [28.539, 33.975], [30.648, 34.425], [31.768, 35.725], [31.871, 35.444], [32.055, 35.289]], "cor": "#ea580c"}]}, {"id": "monarquia_templo", "nome": "Reino Unido & Jerusalém de Salomão", "periodo": "~1050 – 930 a.C.", "livros": "1 e 2 Samuel, 1 Reis 1–11", "descricao_era": "Davi conquista a fortaleza de Sião e Salomão ergue o Primeiro Templo de Jerusalém no Monte Moriá.", "centro": [31.8, 35.2], "zoom": 7, "cor": "#16a34a", "locais": [{"passo": 1, "id": "belem_davi", "nome": "1. Belém de Judá (Efrata)", "coords": [31.705, 35.202], "pais": "Cisjordânia", "biblia": "1 Samuel 16:1–13", "autor": "Samuel / Natã / Gade", "onde_autor": "Jerusalém e Ramá", "resumo": "Unção do jovem pastor Davi", "descricao": "O profeta Samuel vai à casa de Jessé e unge Davi, o filho mais novo, em meio aos seus irmãos, descendo sobre ele o Espírito do Senhor.", "teologia": "Deus não olha para a aparência ou estatura, mas perscruta o coração (1 Samuel 16:7).", "arqueologia": "Povoamento contínuo da Idade do Ferro nas colinas ao sul de Jerusalém.", "icone": "🐑", "subtitulo": "Ungido Rei pelo Profeta Samuel"}, {"passo": 2, "id": "jerusalem_moria", "nome": "2. Jerusalém (Monte Moriá)", "coords": [31.778, 35.235], "pais": "Jerusalém", "biblia": "2 Samuel 5:6–9; 1 Reis 6; 8", "autor": "Escribas Reais / Natã / Salomão", "onde_autor": "Corte Real de Jerusalém", "resumo": "Sião e a Dedicação do Primeiro Templo", "descricao": "Davi conquista a fortaleza dos jebuseus e faz de Sião a capital da nação. Salomão mobiliza ouro e cedros do Líbano para construir o Templo.", "teologia": "A Presença da Glória Shekinah de Deus habitando visivelmente no meio do Seu povo redimido.", "arqueologia": "A Cidade de Davi, a fonte de Giom, o túnel de Ezequias e o complexo da Esplanada do Templo.", "icone": "⭐", "subtitulo": "Primeiro Templo & Capital de Davi"}], "rotas": []}, {"id": "exilio_assirio", "nome": "Exílio Assírio (Reino do Norte)", "periodo": "722 a.C.", "livros": "2 Reis 17; Oseias; Amós", "descricao_era": "A invasão de Sargão II, a queda da capital Samaria e a deportação das dez tribos de Israel para a Mesopotâmia e Média.", "centro": [34.5, 40.0], "zoom": 5, "cor": "#7c3aed", "locais": [{"passo": 1, "id": "samaria_queda", "nome": "1. Samaria (Capital do Norte)", "coords": [32.277, 35.19], "pais": "Cisjordânia (Sebastia)", "biblia": "2 Reis 17:5–6", "autor": "Cronistas do Reino de Judá", "onde_autor": "Jerusalém (Templo)", "resumo": "Cerco de 3 anos e queda de Samaria", "descricao": "Após três anos de cerco assírio, Samaria capitula no nono ano de Oseias. A monarquia do norte é extinta devido à idolatria persistente.", "teologia": "A quebra reiterada da Aliança atrai a disciplina profetizada na Lei de Moisés.", "arqueologia": "Marfins de Samaria encontrados nos palácios da acrópole e estelas cuneiformes de Sargão II celebrando a conquista.", "icone": "🏛️", "subtitulo": "Queda perante Sargão II em 722 a.C."}, {"passo": 2, "id": "ninive_habor", "nome": "2. Nínive & Rio Habor (Média)", "coords": [36.359, 43.152], "pais": "Iraque Setentrional", "biblia": "2 Reis 17:6", "autor": "Historiadores Bíblicos", "onde_autor": "Jerusalém", "resumo": "Dispersão das 10 Tribos na Assíria", "descricao": "Os cativos israelitas foram assentados em Hala, junto ao rio Habor (afluente do Eufrates), no rio Gozan e nas cidades dos Medos.", "teologia": "A dispersão das tribos do norte pelo império e a promessa profética de reunião escatológica.", "arqueologia": "Os monumentais palácios de Senaqueribe e Assurbanipal em Koyunjik (Mossul).", "icone": "🦁", "subtitulo": "Cativeiro das Dez Tribos do Norte"}], "rotas": [{"nome": "Rota da Deportação Assíria (Samaria ➔ Nínive)", "pontos": [[32.277, 35.19], [33.513, 36.291], [36.85, 40.06], [36.359, 43.152]], "cor": "#7c3aed"}]}, {"id": "exilio_babilonico", "nome": "Exílio Babilônico & Rio Quebar", "periodo": "586 – 538 a.C.", "livros": "2 Reis 25; Jeremias; Ezequiel; Daniel", "descricao_era": "Nabucodonosor queima o Templo de Jerusalém e deporta Judá para a Babilônia, onde Daniel testemunha e Ezequiel profetiza.", "centro": [32.5, 40.0], "zoom": 5, "cor": "#9333ea", "locais": [{"passo": 1, "id": "jerusalem_cinzas", "nome": "1. Jerusalém em Chamas (586 a.C.)", "coords": [31.777, 35.234], "pais": "Jerusalém", "biblia": "2 Reis 25:8–12; Lamentações 1", "autor": "Profeta Jeremias", "onde_autor": "Jerusalém (ruínas do Templo)", "resumo": "Destruição do Templo e dos Muros", "descricao": "Nebuzaradã incendeia o Templo de Salomão, o palácio real e todas as casas de Jerusalém. As muralhas são demolidas e Judá é levado cativo.", "teologia": "O clímax do juízo profético e a esperança de Jeremias: 'As misericórdias do Senhor não têm fim' (Lm 3:22).", "arqueologia": "Camadas espessas de cinzas e pontas de flechas babilônicas escavadas na encosta ocidental de Jerusalém.", "icone": "🔥", "subtitulo": "Incêndio do Templo por Nabucodonosor"}, {"passo": 2, "id": "babilonia_imperial", "nome": "2. Babilônia Imperial (Porta de Ishtar)", "coords": [32.542, 44.421], "pais": "Iraque (Hillah)", "biblia": "Daniel 1:1–6; Salmo 137", "autor": "Daniel", "onde_autor": "Corte Imperial da Babilônia", "resumo": "Fidelidade de Daniel e seus amigos", "descricao": "Metrópole de Nabucodonosor. Daniel recusa as iguarias reais, interpreta os sonhos do rei e sobrevive à cova dos leões.", "teologia": "A soberania absoluta de Deus sobre todos os impérios terrenos: 'O Altíssimo domina sobre os reinos dos homens'.", "arqueologia": "A monumental Porta de Ishtar, a Via Processional e os relevos de tijolos azuis com dragões de Marduque.", "icone": "🏰", "subtitulo": "Corte de Nabucodonosor & Daniel"}, {"passo": 3, "id": "rio_quebar", "nome": "3. Rio Quebar (Tel Abib)", "coords": [32.05, 44.95], "pais": "Iraque Central (Canal Nar Kabari)", "biblia": "Ezequiel 1:1–3; 37:1–14", "autor": "Profeta Ezequiel", "onde_autor": "Colônia de exilados em Tel Abib", "resumo": "Visão da Glória e o Vale de Ossos Secos", "descricao": "Às margens do canal Quebar, o sacerdote Ezequiel vê os céus se abrirem e contempla a carruagem da Glória divina, profetizando a ressurreição nacional.", "teologia": "Deus não está preso a um edifício em Jerusalém; Sua Glória acompanha e restaura o povo até no exílio.", "arqueologia": "O grande canal Nar Kabari foi documentado em tabuletas cuneiformes de Nippur do período neobabilônico.", "icone": "✨", "subtitulo": "Visões Celestiais de Ezequiel"}], "rotas": [{"nome": "Rota do Exílio para a Babilônia (1 ➔ 3)", "pontos": [[31.777, 35.234], [34.45, 36.56], [35.335, 40.147], [33.315, 44.366], [32.542, 44.421], [32.05, 44.95]], "cor": "#9333ea"}]}, {"id": "retorno_persa", "nome": "Retorno sob Ciro & 2º Templo", "periodo": "~538 – 445 a.C.", "livros": "Esdras; Neemias; Ester", "descricao_era": "O Édito de Ciro permite o regresso dos judeus; Zorobabel edifica o Segundo Templo e Neemias reconstrói os muros.", "centro": [32.5, 42.0], "zoom": 5, "cor": "#2563eb", "locais": [{"passo": 1, "id": "susa_ester_neemias", "nome": "1. Susã (Shush)", "coords": [32.19, 48.257], "pais": "Irã Ocidental", "biblia": "Ester 2; Neemias 1:1; 2:1", "autor": "Neemias", "onde_autor": "Corte de Susã / Jerusalém", "resumo": "Palácio dos Reis Aquemênidas", "descricao": "Residência de inverno dos reis persas. Ester salva seu povo do extermínio, e Neemias, copeiro de Artaxerxes, pede autorização para reerguer Sião.", "teologia": "A providência invisível de Deus que governa o coração dos soberanos mais poderosos da terra.", "arqueologia": "O palácio Apadana de Dario e os célebres frisos de arqueiros persas preservados no Museu do Louvre.", "icone": "👑", "subtitulo": "Palácio Real de Ester e Neemias"}, {"passo": 2, "id": "jerusalem_segundo_templo", "nome": "2. Jerusalém (Segundo Templo)", "coords": [31.777, 35.234], "pais": "Jerusalém", "biblia": "Esdras 3:10–13; Neemias 6:15", "autor": "Esdras e Neemias", "onde_autor": "Jerusalém Restaurada", "resumo": "Dedicação do Templo e Muros em 52 dias", "descricao": "Zorobabel e Josué consagram o Segundo Templo em 516 a.C. Décadas depois, Neemias lidera os cidadãos e conclui os muros protetores em tempo recorde.", "teologia": "O cumprimento fiel da profecia dos 70 anos de Jeremias e a renovação solene da Aliança com Esdras.", "arqueologia": "Trechos dos muros persas e selos administrativos de Yehud escavados na Cidade de Davi.", "icone": "🧱", "subtitulo": "Segundo Templo e Muros Restaurados"}], "rotas": [{"nome": "Rota do Retorno de Susã a Jerusalém (1 ➔ 2)", "pontos": [[32.19, 48.257], [33.315, 44.366], [36.202, 36.16], [33.513, 36.291], [31.777, 35.234]], "cor": "#2563eb"}]}, {"id": "ministerio_jesus", "nome": "O Ministério de Jesus Cristo", "periodo": "~4 a.C. – 33 d.C.", "livros": "Mateus, Marcos, Lucas, João", "descricao_era": "A encarnação, batismo no Jordão, ministério de cura e ensino na Galileia e a Páscoa da Ressurreição em Jerusalém.", "centro": [32.3, 35.3], "zoom": 8, "cor": "#dc2626", "locais": [{"passo": 1, "id": "belem_natividade", "nome": "1. Belém da Judeia", "coords": [31.704, 35.207], "pais": "Cisjordânia", "biblia": "Lucas 2:1–7; Mateus 2:1", "autor": "Lucas e Mateus", "onde_autor": "Cesareia/Roma (Lucas) e Judeia/Antioquia (Mateus)", "resumo": "Nascimento virginal do Messias", "descricao": "José e Maria sobem de Nazaré para o recenseamento de César Augusto. Jesus nasce na manjedoura cumprindo a profecia de Miqueias 5:2.", "teologia": "O mistério da Encarnação: o Verbo se fez carne e habitou entre nós (João 1:14).", "arqueologia": "A Basílica da Natividade erguida por Constantino e Santa Helena sobre a Gruta da Natividade.", "icone": "⭐", "subtitulo": "Encarnação & Cumprimento Profético"}, {"passo": 2, "id": "cafarnaum_galileia", "nome": "2. Cafarnaum (Mar da Galileia)", "coords": [32.88, 35.575], "pais": "Israel (Lago de Genesaré)", "biblia": "Marcos 1:21–34; Mateus 4:13", "autor": "Marcos (memórias de Pedro)", "onde_autor": "Roma", "resumo": "Quartel-general de Jesus e Casa de Pedro", "descricao": "Vila pesqueira onde Jesus ensinava com autoridade na sinagoga, curou o paralítico descido pelo telhado e chamou os discípulos.", "teologia": "O Reino de Deus inaugurado em poder mediante curas, libertações e pregação da graça.", "arqueologia": "A sinagoga monumental sobre as fundações do século I e a igreja octogonal sobre a Casa de São Pedro.", "icone": "🐟", "subtitulo": "Quartel-General do Ministério de Jesus"}, {"passo": 3, "id": "cesareia_pedro_primado", "nome": "3. Cesareia de Filipe (Banias)", "coords": [33.248, 35.693], "pais": "Israel (Nascentes do Jordão)", "biblia": "Mateus 16:13–19", "autor": "Mateus", "onde_autor": "Antioquia da Síria", "resumo": "Confissão de Pedro e Promessa da Igreja", "descricao": "Ao pé do Monte Hermom, Simão proclama: 'Tu és o Cristo, o Filho do Deus vivo!'. Jesus responde: 'Tu és Pedro, e sobre esta pedra edificarei a minha Igreja'.", "teologia": "A fundação e estabilidade da Igreja sobre a confissão messiânica e a primazia conferida a Pedro.", "arqueologia": "Gruta e nichos do santuário helenístico dedicados a Pã nas escarpas de calcário de Banias.", "icone": "🔑", "subtitulo": "A Confissão Messiânica de Pedro"}, {"passo": 4, "id": "golgota_sepulcro", "nome": "4. Jerusalém (Gólgota & Ressurreição)", "coords": [31.778, 35.229], "pais": "Jerusalém", "biblia": "João 19–20; Lucas 23–24", "autor": "Os Quatro Evangelistas", "onde_autor": "Roma, Éfeso, Antioquia", "resumo": "Sacrifício Vicário e Túmulo Vazio", "descricao": "Gólgota (Calvário), tribunal de Pilatos e o jardim do sepulcro novo escavado na rocha de onde Cristo ressurgiu glorioso ao terceiro dia.", "teologia": "A justificação de todo aquele que crê pelo sacrifício expiatório e a vitória definitiva sobre o pecado e a morte.", "arqueologia": "A Basílica do Santo Sepulcro encerra a rocha do Calvário e a Edícula do Sepulcro venerada desde os primeiros séculos.", "icone": "✝️", "subtitulo": "Calvário e Túmulo Vazio"}], "rotas": [{"nome": "Eixo das Viagens de Jesus (1 ➔ 4)", "pontos": [[31.704, 35.207], [32.701, 35.297], [32.88, 35.575], [33.248, 35.693], [32.88, 35.575], [31.778, 35.229]], "cor": "#dc2626"}]}, {"id": "expansao_paulo", "nome": "Expansão Apostólica & Paulo em Roma", "periodo": "~33 – 68 d.C.", "livros": "Atos dos Apóstolos; Epístolas Paulinas", "descricao_era": "De Pentecostes até os confins da terra: conversão de Saulo, viagens pelo mar Egeu e as cartas escritas da prisão em Roma.", "centro": [37.0, 22.0], "zoom": 5, "cor": "#0891b2", "locais": [{"passo": 1, "id": "antioquia_missoes", "nome": "1. Antioquia da Síria", "coords": [36.202, 36.16], "pais": "Turquia (Antakya)", "biblia": "Atos 11:26; 13:1–3", "autor": "Lucas", "onde_autor": "Roma / Cesareia", "resumo": "Base missionária dos gentios", "descricao": "Comunidade onde os discípulos foram pela primeira vez chamados cristãos e de onde Paulo e Barnabé foram enviados pelo Espírito Santo para as missões.", "teologia": "A Igreja universal que supera barreiras étnicas unindo judeus e gregos em um só corpo.", "arqueologia": "A Igreja da Caverna de São Pedro em Antakya, uma das mais antigas capelas cristãs rupestres.", "icone": "⛪", "subtitulo": "Onde Foram Chamados Cristãos"}, {"passo": 2, "id": "efeso_apostolo", "nome": "2. Éfeso (Ásia Menor)", "coords": [37.94, 27.341], "pais": "Turquia Ocidental", "biblia": "Atos 19; Efésios 1", "autor": "Paulo (escreve da prisão em Roma)", "onde_autor": "Roma (acorrentado)", "resumo": "Dois anos de ensino na Escola de Tirano", "descricao": "Principal metrópole romana da Ásia. Paulo pregou por mais de dois anos; mais tarde, da prisão em Roma, envia aos efésios a sublime carta sobre o Corpo de Cristo.", "teologia": "O mistério de Cristo unindo a Igreja cósmica e a armadura espiritual do cristão.", "arqueologia": "A Biblioteca de Celso, o Grande Teatro do tumulto de Demétrio e a Basílica de São João.", "icone": "🏛️", "subtitulo": "Escola de Tirano & Teatro"}, {"passo": 3, "id": "atenas_areopago", "nome": "3. Atenas (Areópago)", "coords": [37.971, 23.726], "pais": "Grécia", "biblia": "Atos 17:16–34", "autor": "Lucas", "onde_autor": "Roma", "resumo": "Discurso ao Deus Desconhecido", "descricao": "Na colina de Marte, Paulo discursa perante filósofos estóicos e epicureus, pregando o Deus criador e a ressurreição corpórea de Cristo.", "teologia": "O encontro da revelação bíblica com a filosofia grega: Deus não habita em templos feitos por mãos humanas.", "arqueologia": "A rocha do Areópago de mármore escorregadio ao lado da Acrópole e do Partenon.", "icone": "⚖️", "subtitulo": "O Deus Desconhecido & Ressurreição"}, {"passo": 4, "id": "roma_prisao_martirio", "nome": "4. Roma (Prisão & Martírio Apostólico)", "coords": [41.902, 12.453], "pais": "Itália", "biblia": "Atos 28:16–31; 2 Timóteo 4:6–8", "autor": "Paulo", "onde_autor": "Roma (Prisão domiciliar e depois Cárcere Mamertino)", "resumo": "Epístolas da Prisão e o Duplo Martírio", "descricao": "Paulo chega preso e prega por dois anos aos guardas pretorianos, escrevendo Efésios, Filipenses, Colossenses e Filemom. Sob Nero, sela seu combate com a morte, assim como Pedro.", "teologia": "'Combati o bom combate, acabei a carreira, guardei a fé' (2 Timóteo 4:7).", "arqueologia": "A necrópole vaticana sob o altar da Basílica de São Pedro e o túmulo de Paulo na Basílica de São Paulo Extramuros.", "icone": "🏛️", "subtitulo": "Sé de Pedro e Martírio de Paulo"}], "rotas": [{"nome": "Rota Apostólica de Antioquia até Roma (1 ➔ 4)", "pontos": [[36.202, 36.16], [37.94, 27.341], [37.971, 23.726], [35.9, 14.4], [40.82, 14.12], [41.902, 12.453]], "cor": "#0891b2"}]}, {"id": "niceia_pentarquia", "nome": "Concílio de Nicéia & A Pentarquia", "periodo": "313 – 380 d.C.", "livros": "Edito de Milão; Credo Niceno (325 d.C.)", "descricao_era": "A liberdade de culto sob Constantino, o Primeiro Concílio Ecumênico em Nicéia e a organização das cinco sés patriarcais.", "centro": [39.0, 22.0], "zoom": 5, "cor": "#b91c1c", "locais": [{"passo": 1, "id": "milao_edito", "nome": "1. Milão (Mediolanum)", "coords": [45.464, 9.19], "pais": "Itália Setentrional", "biblia": "Edito de Milão (313 d.C.)", "autor": "Constantino I e Licínio", "onde_autor": "Milão (Corte Imperial)", "resumo": "Liberdade religiosa e fim das perseguições", "descricao": "Os imperadores promulgam a tolerância religiosa para todas as fés e determinam a imediata restituição dos locais de culto confiscados aos cristãos.", "teologia": "A vitória histórica da perseverança e do sangue dos mártires sobre a tirania imperial romana.", "arqueologia": "A Basílica de Santo Ambrósio preserva colunas paleocristãs e os restos mortais do bispo Ambrósio do século IV.", "icone": "📜", "subtitulo": "Paz da Igreja e Liberdade de Culto"}, {"passo": 2, "id": "niceia_credo", "nome": "2. Nicéia (Bitínia)", "coords": [40.428, 29.721], "pais": "Turquia (Iznik)", "biblia": "Credo Niceno (325 d.C.)", "autor": "Mais de 300 Bispos e Santo Atanásio", "onde_autor": "Palácio Senatorial de Nicéia", "resumo": "Primeiro Concílio Ecumênico", "descricao": "Convocado por Constantino para combater a heresia ariana. Os bispos de todo o mundo proclamam que Cristo é 'Deus verdadeiro de Deus verdadeiro, consubstancial ao Pai' (Homoousios).", "teologia": "A definição irrevogável da divindade plena de Nosso Senhor Jesus Cristo e da Trindade Santa.", "arqueologia": "A basílica submersa no Lago Iznik foi recentemente mapeada por arqueólogos como provável sede conciliar.", "icone": "✝️", "subtitulo": "O Credo Niceno (Homoousios)"}, {"passo": 3, "id": "constantinopla_nova_roma", "nome": "3. Constantinopla (Nova Roma)", "coords": [41.008, 28.978], "pais": "Turquia (Istambul)", "biblia": "Concílio de 381 d.C. / Edito de Tessalônica", "autor": "Imperador Teodósio I", "onde_autor": "Constantinopla", "resumo": "Capital Cristã & Segunda Sé de Honra", "descricao": "Fundada por Constantino em 330 d.C. para ser a nova capital cristã. Em 380 d.C., o cristianismo niceno é declarado a religião oficial do Império Romano.", "teologia": "A consolidação institucional da Igreja Católica como comunhão universal dos povos no mundo mediterrâneo.", "arqueologia": "A majestosa Basílica de Santa Sofia (Hagia Sophia) e o Hipódromo imperial de Constantino.", "icone": "🏛️", "subtitulo": "Capital Imperial do Oriente"}], "rotas": [{"nome": "Eixo Imperial Cristão (Milão ➔ Nicéia ➔ Constantinopla)", "pontos": [[45.464, 9.19], [40.428, 29.721], [41.008, 28.978]], "cor": "#b91c1c"}]}, {"id": "ramificacoes_duas_igrejas", "nome": "Ramificações & As Duas Igrejas Católicas", "periodo": "~451 – 1054 d.C.", "livros": "Concílios de Éfeso, Calcedônia e o Cisma de 1054", "descricao_era": "A consolidação da Igreja Católica Romana no Ocidente e da Igreja Católica Ortodoxa no Oriente, além das Igrejas Orientais antigas.", "centro": [38.5, 20.0], "zoom": 5, "cor": "#c026d3", "locais": [{"passo": 1, "id": "se_roma_catolica", "nome": "1. Roma (Igreja Católica Apostólica Romana)", "coords": [41.902, 12.453], "pais": "Itália / Cidade do Vaticano", "biblia": "Primado Petrino (Mateus 16:18; João 21:15)", "autor": "Bispos de Roma (Papas)", "onde_autor": "Palácio de Latrão e Vaticano", "resumo": "Sé Apostólica de Pedro e Rito Latino Ocidental", "descricao": "Sede primacial do Ocidente de língua latina. Consolidou a jurisdição do Papa sobre a Igreja ocidental, a evangelização dos povos germânicos e a teologia escolástica.", "teologia": "O Papa como Vigário de Cristo e sucessor de São Pedro na cátedra romana com autoridade universal de ensino.", "arqueologia": "As Catacumbas de São Calisto, a Basílica de São João de Latrão e a Basílica Papal de São Pedro.", "icone": "🇻🇦", "subtitulo": "Sé Papal & Tradição Latina Ocidental"}, {"passo": 2, "id": "se_constantinopla_ortodoxa", "nome": "2. Constantinopla (Igreja Católica Ortodoxa)", "coords": [41.008, 28.978], "pais": "Turquia (Fener, Istambul)", "biblia": "Patriarcado Ecumênico", "autor": "Patriarcas de Constantinopla", "onde_autor": "Constantinopla", "resumo": "Patriarcado Ecumênico & Rito Bizantino", "descricao": "Sé imperial de língua grega que liderou o cristianismo do Oriente (Grécia, Rússia, Balcãs). No Grande Cisma de 1054, separou-se de Roma devido a questões como o Filioque e a primazia papal.", "teologia": "A Igreja dos Sete Concílios Ecumênicos governada de forma conciliar (sinodalidade) pelos Patriarcas.", "arqueologia": "A Igreja Patriarcal de São Jorge e a Basílica de Santa Sofia preservam séculos de arte de mosaicos sacros bizantinos.", "icone": "☦️", "subtitulo": "Patriarcado Ecumênico & Tradição Ortodoxa"}, {"passo": 3, "id": "alexandria_copta", "nome": "3. Alexandria (Igreja Ortodoxa Copta)", "coords": [31.2, 29.918], "pais": "Egito", "biblia": "Fundação por São Marcos Evangelista", "autor": "Patriarcas Coptas de Alexandria", "onde_autor": "Alexandria e Mosteiros de Uádi Natrum", "resumo": "Cisão de Calcedônia (451 d.C.)", "descricao": "Fundada segundo a tradição por São Marcos. Não aceitou as fórmulas cristológicas do Concílio de Calcedônia (451 d.C.), preservando até hoje o rito copta com língua litúrgica autóctone.", "teologia": "Tradição das Igrejas Ortodoxas Orientais (Não-Calcedonianas), marcada por uma espiritualidade monástica milenar no deserto.", "arqueologia": "Os mosteiros do deserto de Uádi Natrum fundados por Santo Antão e São Pacômio preservam manuscritos do século IV.", "icone": "✝️", "subtitulo": "Tradição Copta de São Marcos"}], "rotas": [{"nome": "Eixo das Duas Grandes Tradições (Roma ➔ Constantinopla)", "pontos": [[41.902, 12.453], [40.85, 14.268], [39.62, 19.92], [40.64, 22.94], [41.008, 28.978]], "cor": "#c026d3"}]}]};
+
+    // Variáveis globais de controle
+    let map;
+    let currentEraIndex = 0;
+    let currentPlaceIndex = 0;
+    let markersLayerGroup;
+    let routesLayerGroup;
+    let autoPlayTimer = null;
+    let currentActivePlace = null;
+    let baseLayers = {};
+    let currentBaseLayer = null;
+
+    // Inicialização da aplicação
+    document.addEventListener("DOMContentLoaded", () => {
+      initMap();
+      renderTimelineChips();
+      loadEra(0);
+      setupEvents();
+    });
+
+    // 1. Inicializar o Leaflet Map
+    function initMap() {
+      map = L.map('map', {
+        zoomControl: false,
+        attributionControl: false
+      }).setView([31.0, 46.5], 6);
+
+      L.control.zoom({ position: 'topleft' }).addTo(map);
+
+      L.control.attribution({ position: 'bottomleft', prefix: false })
+        .addAttribution('Tiles &copy; Esri GIS | Atlas Bíblico')
+        .addTo(map);
+
+      // Camadas ArcGIS Online (livres de exigência de Referer)
+      baseLayers.satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 18,
+        attribution: 'Esri Satellite'
+      });
+
+      baseLayers.topo = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 18,
+        attribution: 'Esri Topo'
+      });
+
+      baseLayers.street = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 18,
+        attribution: 'Esri Streets'
+      });
+
+      currentBaseLayer = baseLayers.satellite;
+      currentBaseLayer.addTo(map);
+
+      markersLayerGroup = L.layerGroup().addTo(map);
+      routesLayerGroup = L.layerGroup().addTo(map);
+    }
+
+    // 2. Renderizar Chips da Linha do Tempo
+    function renderTimelineChips() {
+      const container = document.getElementById("eraChipsTrack");
+      container.innerHTML = "";
+
+      atlasData.eras.forEach((era, index) => {
+        const chip = document.createElement("div");
+        chip.className = `era-chip ${index === 0 ? "active" : ""}`;
+        chip.id = `era-chip-${index}`;
+        chip.innerHTML = `
+          <div class="chip-name">${index + 1}. ${era.nome}</div>
+          <div class="chip-period">${era.periodo}</div>
+        `;
+        chip.addEventListener("click", () => {
+          stopAutoPlay();
+          loadEra(index);
+        });
+        container.appendChild(chip);
+      });
+    }
+
+    // 3. Carregar uma Época Específica
+    function loadEra(index) {
+      currentEraIndex = index;
+      currentPlaceIndex = 0;
+      const era = atlasData.eras[index];
+
+      document.getElementById("timelineEraTitle").textContent = `${index + 1}. ${era.nome}`;
+      document.getElementById("timelineEraYears").textContent = era.periodo;
+      document.getElementById("pillEraName").textContent = era.nome;
+
+      document.querySelectorAll(".era-chip").forEach((chip, i) => {
+        chip.classList.toggle("active", i === index);
+      });
+
+      const activeChip = document.getElementById(`era-chip-${index}`);
+      if (activeChip) {
+        activeChip.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      }
+
+      markersLayerGroup.clearLayers();
+      routesLayerGroup.clearLayers();
+
+      map.flyTo(era.centro, era.zoom, {
+        duration: 1.2,
+        easeLinearity: 0.25
+      });
+
+      // Traçar Rotas
+      if (era.rotas && era.rotas.length > 0) {
+        era.rotas.forEach(rota => {
+          const polyline = L.polyline(rota.pontos, {
+            color: rota.cor || era.cor,
+            weight: 4,
+            opacity: 0.85,
+            dashArray: '8, 8',
+            lineJoin: 'round'
+          }).addTo(routesLayerGroup);
+
+          polyline.bindTooltip(`<b>${rota.nome}</b>`, { sticky: true });
+        });
+      }
+
+      // Adicionar Marcadores Numerados
+      era.locais.forEach((local, locIdx) => {
+        const pinNumber = local.passo || (locIdx + 1);
+        const customIcon = L.divIcon({
+          className: 'custom-numbered-icon',
+          html: `<div class="numbered-step-pin" style="background-color: ${era.cor};">
+                  ${pinNumber}
+                 </div>`,
+          iconSize: [32, 32],
+          iconAnchor: [16, 16],
+          popupAnchor: [0, -18]
+        });
+
+        const marker = L.marker(local.coords, { icon: customIcon }).addTo(markersLayerGroup);
+
+        const popupContent = `
+          <div class="popup-inner">
+            <h3>Passo ${pinNumber}: ${local.nome}</h3>
+            <p><b>Autor:</b> ${local.autor} (${local.biblia})</p>
+            <button class="btn-more" onclick="showPlaceDetails(${locIdx})">Ver Ficha Completa</button>
+          </div>
+        `;
+        marker.bindPopup(popupContent);
+
+        marker.on('click', () => {
+          showPlaceDetails(locIdx);
+        });
+      });
+
+      // Abrir automaticamente a ficha do primeiro passo da época
+      if (era.locais.length > 0) {
+        showPlaceDetails(0);
+      }
+    }
+
+    // 4. Exibir Detalhes no Painel Lateral
+    window.showPlaceDetails = function(placeIdx) {
+      const era = atlasData.eras[currentEraIndex];
+      if (!era || !era.locais[placeIdx]) return;
+
+      currentPlaceIndex = placeIdx;
+      const place = era.locais[placeIdx];
+      currentActivePlace = place;
+
+      const drawer = document.getElementById("detailDrawer");
+      document.getElementById("drawerTitle").textContent = place.nome;
+      document.getElementById("drawerStep").textContent = `Passo ${place.passo || (placeIdx + 1)}`;
+      document.getElementById("drawerEra").textContent = era.nome;
+      document.getElementById("drawerBiblia").textContent = place.biblia;
+
+      document.getElementById("drawerAutor").textContent = `${place.autor} (${place.pais || ''})`;
+      document.getElementById("drawerOndeAutor").textContent = place.onde_autor || "Registrado sob inspiração das Escrituras.";
+
+      document.getElementById("drawerDescricao").textContent = place.descricao;
+      document.getElementById("drawerTeologia").textContent = place.teologia || place.resumo;
+      document.getElementById("drawerArqueologia").textContent = place.arqueologia;
+
+      document.getElementById("visualIcon").textContent = place.icone || "🏛️";
+      document.getElementById("visualTitle").textContent = place.nome;
+      document.getElementById("visualSub").textContent = place.subtitulo || era.periodo;
+
+      drawer.classList.remove("closed");
+    };
+
+    // 5. Configurar Eventos e Interações
+    function setupEvents() {
+      // Seletor de Estilo do Mapa
+      const mapStyleSelect = document.getElementById("mapStyleSelect");
+      mapStyleSelect.addEventListener("change", (e) => {
+        const selected = e.target.value;
+        if (baseLayers[selected]) {
+          map.removeLayer(currentBaseLayer);
+          currentBaseLayer = baseLayers[selected];
+          currentBaseLayer.addTo(map);
+        }
+      });
+
+      // Fechar Drawer
+      document.getElementById("btnCloseDrawer").addEventListener("click", () => {
+        document.getElementById("detailDrawer").classList.add("closed");
+      });
+
+      // Botão Focar no Mapa
+      document.getElementById("btnFocusMap").addEventListener("click", () => {
+        if (currentActivePlace) {
+          map.flyTo(currentActivePlace.coords, 10, { duration: 1.0 });
+        }
+      });
+
+      // Botões Passo Anterior e Próximo Passo
+      document.getElementById("btnPrevStep").addEventListener("click", () => {
+        const era = atlasData.eras[currentEraIndex];
+        if (currentPlaceIndex > 0) {
+          showPlaceDetails(currentPlaceIndex - 1);
+          map.flyTo(era.locais[currentPlaceIndex].coords, 9, { duration: 0.8 });
+        } else if (currentEraIndex > 0) {
+          loadEra(currentEraIndex - 1);
+          const prevEra = atlasData.eras[currentEraIndex];
+          showPlaceDetails(prevEra.locais.length - 1);
+        }
+      });
+
+      document.getElementById("btnNextStep").addEventListener("click", () => {
+        const era = atlasData.eras[currentEraIndex];
+        if (currentPlaceIndex < era.locais.length - 1) {
+          showPlaceDetails(currentPlaceIndex + 1);
+          map.flyTo(era.locais[currentPlaceIndex].coords, 9, { duration: 0.8 });
+        } else if (currentEraIndex < atlasData.eras.length - 1) {
+          loadEra(currentEraIndex + 1);
+        }
+      });
+
+      // Navegação Época Anterior / Próxima
+      document.getElementById("btnPrevEra").addEventListener("click", () => {
+        stopAutoPlay();
+        if (currentEraIndex > 0) {
+          loadEra(currentEraIndex - 1);
+        } else {
+          loadEra(atlasData.eras.length - 1);
+        }
+      });
+
+      document.getElementById("btnNextEra").addEventListener("click", () => {
+        stopAutoPlay();
+        advanceNextEra();
+      });
+
+      // Botão Reproduzir Cronologia
+      const playBtn = document.getElementById("btnPlayTimeline");
+      playBtn.addEventListener("click", () => {
+        if (autoPlayTimer) {
+          stopAutoPlay();
+        } else {
+          startAutoPlay();
+        }
+      });
+
+      // Barra de Busca
+      const searchInput = document.getElementById("searchInput");
+      searchInput.addEventListener("input", (e) => {
+        const query = e.target.value.toLowerCase().trim();
+        if (query.length < 2) return;
+
+        for (let i = 0; i < atlasData.eras.length; i++) {
+          const era = atlasData.eras[i];
+          const foundIdx = era.locais.findIndex(l => 
+            l.nome.toLowerCase().includes(query) || 
+            l.resumo.toLowerCase().includes(query) ||
+            l.biblia.toLowerCase().includes(query) ||
+            (l.autor && l.autor.toLowerCase().includes(query))
+          );
+          if (foundIdx !== -1) {
+            loadEra(i);
+            setTimeout(() => {
+              showPlaceDetails(foundIdx);
+              map.flyTo(era.locais[foundIdx].coords, 9, { duration: 1.0 });
+            }, 600);
+            break;
+          }
+        }
+      });
+
+      // Modal de Ajuda / Sobre
+      const helpModal = document.getElementById("helpModal");
+      document.getElementById("btnHelp").addEventListener("click", () => {
+        helpModal.classList.add("open");
+      });
+      document.getElementById("btnCloseHelp").addEventListener("click", () => {
+        helpModal.classList.remove("open");
+      });
+      helpModal.addEventListener("click", (e) => {
+        if (e.target === helpModal) helpModal.classList.remove("open");
+      });
+    }
+
+    function advanceNextEra() {
+      if (currentEraIndex < atlasData.eras.length - 1) {
+        loadEra(currentEraIndex + 1);
+      } else {
+        loadEra(0);
+      }
+    }
+
+    function startAutoPlay() {
+      const playBtn = document.getElementById("btnPlayTimeline");
+      playBtn.classList.add("active-play");
+      playBtn.innerHTML = "⏸ Pausar";
+      autoPlayTimer = setInterval(() => {
+        advanceNextEra();
+      }, 8000);
+    }
+
+    function stopAutoPlay() {
+      if (autoPlayTimer) {
+        clearInterval(autoPlayTimer);
+        autoPlayTimer = null;
+        const playBtn = document.getElementById("btnPlayTimeline");
+        playBtn.classList.remove("active-play");
+        playBtn.innerHTML = "▶ Reproduzir";
+      }
+    }
+  </script>
+</body>
+</html>
